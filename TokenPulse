@@ -1,0 +1,45 @@
+# token_pulse.py
+
+from web3 import Web3
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# Replace with your Infura endpoint or other Ethereum node endpoint
+web3 = Web3(Web3.HTTPProvider('https://mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID'))
+
+def fetch_token_transfers(token_address, from_block, to_block):
+    transfers = web3.eth.get_logs({
+        'fromBlock': from_block,
+        'toBlock': to_block,
+        'address': token_address
+    })
+    return transfers
+
+def process_token_transfers(transfers):
+    processed_transfers = []
+    for transfer in transfers:
+        processed_transfers.append({
+            'blockNumber': transfer['blockNumber'],
+            'from': transfer['topics'][1],
+            'to': transfer['topics'][2],
+            'value': int(transfer['data'], 16) / 1e18  # Convert hex to decimal
+        })
+    return processed_transfers
+
+def plot_token_volume(df):
+    daily_volume = df.groupby(pd.Grouper(key='blockNumber', freq='D')).sum()
+    daily_volume.plot(kind='bar', title='Token Daily Volume')
+    plt.xlabel('Date')
+    plt.ylabel('Volume (Token)')
+    plt.show()
+
+if __name__ == "__main__":
+    token_address = '0x1234567890abcdef1234567890abcdef12345678'  # Replace with your token address
+    from_block = 10000000  # Replace with your starting block number
+    to_block = web3.eth.blockNumber  # Fetch current block number
+
+    transfers = fetch_token_transfers(token_address, from_block, to_block)
+    processed_transfers = process_token_transfers(transfers)
+    
+    df = pd.DataFrame(processed_transfers)
+    plot_token_volume(df)
